@@ -1,0 +1,486 @@
+{
+    "models": {
+        "chatglm_6b": {
+            "num_layers": 28,
+            "n_head": 32,
+            "hidden_dim": 4096,
+            "vocab_size": 130538,
+            "max_seq_len": 2048,
+            "mlp_dim": 16384,
+            "family": "chatglm"
+        },
+        "gpt_j": {
+            "num_layers": 28,
+            "n_head": 16,
+            "hidden_dim": 4096,
+            "vocab_size": 50400,
+            "max_seq_len": 50,
+            "mlp_dim": 16384,
+            "family": "gpt"
+        },
+        "llama_7b": {
+            "num_layers": 32,
+            "n_head": 32,
+            "hidden_dim": 4096,
+            "vocab_size": 32000,
+            "max_seq_len": 2048,
+            "mlp_dim": 11008,
+            "family": "llama"
+        },
+        "llama2_7b": {
+            "num_layers": 32,
+            "n_head": 32,
+            "hidden_dim": 4096,
+            "vocab_size": 32000,
+            "max_seq_len": 2048,
+            "kv_hidden_dim": 4096,
+            "mlp_dim": 11008,
+            "family": "llama"
+        },
+        "llama_13b": {
+            "num_layers": 40,
+            "n_head": 40,
+            "hidden_dim": 5120,
+            "vocab_size": 32000,
+            "max_seq_len": 2048,
+            "mlp_dim": 13824,
+            "family": "llama"
+        },
+        "llama2_13b": {
+            "num_layers": 40,
+            "n_head": 40,
+            "hidden_dim": 5120,
+            "vocab_size": 32000,
+            "max_seq_len": 2048,
+            "kv_hidden_dim": 5120,
+            "mlp_dim": 13824,
+            "family": "llama"
+        },
+        "llama_33b": {
+            "num_layers": 60,
+            "n_head": 128,
+            "hidden_dim": 6656,
+            "vocab_size": 32000,
+            "max_seq_len": 2048,
+            "mlp_dim": 17920,
+            "family": "llama"
+        },
+        "llama_65b": {
+            "num_layers": 80,
+            "n_head": 64,
+            "hidden_dim": 8192,
+            "vocab_size": 32000,
+            "max_seq_len": 2048,
+            "mlp_dim": 22016,
+            "family": "llama"
+        },
+        "llama2_70b": {
+            "num_layers": 80,
+            "n_head": 64,
+            "hidden_dim": 8192,
+            "vocab_size": 32000,
+            "max_seq_len": 2048,
+            "kv_hidden_dim": 1024,
+            "mlp_dim": 28672,
+            "family": "llama"
+        },
+        "opt_66b": {
+            "num_layers": 64,
+            "n_head": 128,
+            "hidden_dim": 9216,
+            "vocab_size": 50272,
+            "max_seq_len": 2048,
+            "mlp_dim": 36864,
+            "family": "opt"
+        }
+    },
+    "hardwares": {
+        "PPU-610": {
+            "TFlops": 419,
+            "HBMCapacity_GB": 48,
+            "HBMBandwidth_GB": 1382,
+            "compute_efficiency": 0.8,
+            "HBM_IO_efficiency": 0.8,
+            "intra_node_bandwidth_GB": 400,
+            "intra_node_io_efficiency": 0.75
+        },
+        "PPU-810": {
+            "TFlops": 473,
+            "HBMCapacity_GB": 96,
+            "HBMBandwidth_GB": 2765,
+            "compute_efficiency": 0.8,
+            "HBM_IO_efficiency": 0.8,
+            "intra_node_bandwidth_GB": 450,
+            "intra_node_io_efficiency": 0.75
+        },
+        "V100": {
+            "TFlops": 112,
+            "HBMCapacity_GB": 32,
+            "HBMBandwidth_GB": 900,
+            "compute_efficiency": 0.8,
+            "HBM_IO_efficiency": 0.8,
+            "intra_node_bandwidth_GB": 32,
+            "intra_node_io_efficiency": 0.75
+        },
+        "H800-SXM": {
+            "TFlops": 1979,
+            "HBMCapacity_GB": 80,
+            "HBMBandwidth_GB": 1681,
+            "compute_efficiency": 0.8,
+            "HBM_IO_efficiency": 0.8,
+            "intra_node_bandwidth_GB": 400,
+            "intra_node_io_efficiency": 0.75
+        },
+        "A10": {
+            "TFlops": 125,
+            "HBMCapacity_GB": 24,
+            "HBMBandwidth_GB": 600,
+            "compute_efficiency": 0.8,
+            "HBM_IO_efficiency": 0.8,
+            "intra_node_bandwidth_GB": 64,
+            "intra_node_io_efficiency": 0.75
+        },
+        "MI388X": {
+            "TFlops": 1058,
+            "HBMCapacity_GB": 192,
+            "HBMBandwidth_GB": 5300,
+            "compute_efficiency": 0.8,
+            "HBM_IO_efficiency": 0.8,
+            "intra_node_bandwidth_GB": 448,
+            "intra_node_io_efficiency": 0.75
+        },
+        "RTX-4090": {
+            "TFlops": 165,
+            "HBMCapacity_GB": 24,
+            "HBMBandwidth_GB": 1008,
+            "compute_efficiency": 0.8,
+            "HBM_IO_efficiency": 0.8,
+            "intra_node_bandwidth_GB": 64,
+            "intra_node_io_efficiency": 0.75
+        },
+        "T4": {
+            "TFlops":65,
+            "HBMCapacity_GB": 16,
+            "HBMBandwidth_GB": 320,
+            "compute_efficiency": 0.8,
+            "HBM_IO_efficiency": 0.8,
+            "intra_node_bandwidth_GB": 32,
+            "intra_node_io_efficiency": 0.75    
+        },
+        "A30":{
+            "TFlops":165,
+            "HBMCapacity_GB": 24,
+            "HBMBandwidth_GB": 933,
+            "compute_efficiency": 0.8,
+            "HBM_IO_efficiency": 0.8,
+            "intra_node_bandwidth_GB": 64,
+            "intra_node_io_efficiency": 0.75            
+        },
+        "L40S": {
+            "TFlops": 362,
+            "HBMCapacity_GB": 48,
+            "HBMBandwidth_GB": 864,
+            "compute_efficiency": 0.8,
+            "HBM_IO_efficiency": 0.8,
+            "intra_node_bandwidth_GB": 64,
+            "intra_node_io_efficiency": 0.75
+        },
+        "A100-80-SXM": {
+            "TFlops": 312,
+            "HBMCapacity_GB": 80,
+            "HBMBandwidth_GB": 2039,
+            "compute_efficiency": 0.8,
+            "HBM_IO_efficiency": 0.8,
+            "intra_node_bandwidth_GB": 600,
+            "intra_node_io_efficiency": 0.75
+        },
+        "A100-80-PCIe": {
+            "TFlops": 312,
+            "HBMCapacity_GB": 80,
+            "HBMBandwidth_GB": 1935,
+            "compute_efficiency": 0.8,
+            "HBM_IO_efficiency": 0.8,
+            "intra_node_bandwidth_GB": 600,
+            "intra_node_io_efficiency": 0.75
+        },
+        "A800-80-PCIe": {
+            "TFlops": 312,
+            "HBMCapacity_GB": 80,
+            "HBMBandwidth_GB": 1935,
+            "compute_efficiency": 0.8,
+            "HBM_IO_efficiency": 0.8,
+            "intra_node_bandwidth_GB": 400,
+            "intra_node_io_efficiency": 0.75
+        },
+        "H100-SXM": {
+            "TFlops": 990,
+            "HBMCapacity_GB": 80,
+            "HBMBandwidth_GB": 3350,
+            "compute_efficiency": 0.8,
+            "HBM_IO_efficiency": 0.8,
+            "intra_node_bandwidth_GB": 900,
+            "intra_node_io_efficiency": 0.75
+        },
+        "H100-PCIe": {
+            "TFlops": 757,
+            "HBMCapacity_GB": 80,
+            "HBMBandwidth_GB": 2000,
+            "compute_efficiency": 0.8,
+            "HBM_IO_efficiency": 0.8,
+            "intra_node_bandwidth_GB": 600,
+            "intra_node_io_efficiency": 0.75
+        },
+        "H100-NVL": {
+            "TFlops": 1979,
+            "HBMCapacity_GB": 188,
+            "HBMBandwidth_GB": 7800,
+            "compute_efficiency": 0.8,
+            "HBM_IO_efficiency": 0.8,
+            "intra_node_bandwidth_GB": 600,
+            "intra_node_io_efficiency": 0.75
+        },
+        "Gaudi HL-2080": {
+            "TFlops": 3958,
+            "HBMCapacity_GB": 96,
+            "HBMBandwidth_GB": 2450,
+            "compute_efficiency": 0.8,
+            "HBM_IO_efficiency": 0.8,
+            "intra_node_bandwidth_GB": 400,
+            "intra_node_io_efficiency": 0.75
+        }
+    
+    },
+    "regions": [
+        "us-east-1",
+        "cn-shenzhen",
+        "cn-zhangjiakou",
+        "eu-central-1",
+        "ap-southeast-5",
+        "cn-hongkong",
+        "ap-southeast-1",
+        "ap-northeast-1",
+        "us-west-1",
+        "cn-shanghai",
+        "cn-hangzhou",
+        "cn-beijing",
+        "ap-southeast-2",
+        "cn-qingdao",
+        "cn-nanjing",
+        "cn-chengdu",
+        "cn-fuzhou",
+        "cn-guangzhou",
+        "ap-southeast-3",
+        "cn-heyuan",
+        "ap-south-1",
+        "cn-wulanchabu",
+        "ap-southeast-7",
+        "ap-northeast-2",
+        "cn-huhehaote"
+    ],
+    "nodeInfos": {
+        "ml.gu7i.c8m30.1-gu30": {
+            "CPU": 8,
+            "CPUMemory": 30,
+            "GPU": "1 * GU30",
+            "GPUMemory": "1 * 24"
+        },
+        "ml.gu7i.c16m60.1-gu30": {
+            "CPU": 16,
+            "CPUMemory": 60,
+            "GPU": "1 * GU30",
+            "GPUMemory": "1 * 24"
+        },
+        "ml.gu7i.c32m188.1-gu30": {
+            "CPU": 32,
+            "CPUMemory": 188,
+            "GPU": "1 * GU30",
+            "GPUMemory": "1 * 24"
+        },
+        "ml.gu7i.c64m376.2-gu30": {
+            "CPU": 64,
+            "CPUMemory": 376,
+            "GPU": "2 * GU30",
+            "GPUMemory": "2 * 24"
+        },
+        "ml.gu7i.c128m752.4-gu30": {
+            "CPU": 128,
+            "CPUMemory": 752,
+            "GPU": "4 * GU30",
+            "GPUMemory": "4 * 24"
+        },
+        "ecs.gn5i-c4g1.xlarge": {
+            "CPU": 4,
+            "CPUMemory": 16,
+            "GPU": "1 * NVIDIA P4",
+            "GPUMemory": "1 * 8"
+        },
+        "ecs.gn5i-c8g1.2xlarge": {
+            "CPU": 8,
+            "CPUMemory": 32,
+            "GPU": "1 * NVIDIA P4",
+            "GPUMemory": "1 * 8"
+        },
+        "ecs.gn5-c4g1.xlarge": {
+            "CPU": 4,
+            "CPUMemory": 30,
+            "GPU": "1 * NVIDIA P100",
+            "GPUMemory": "1 * 16"
+        },
+        "ecs.gn5-c8g1.2xlarge": {
+            "CPU": 8,
+            "CPUMemory": 60,
+            "GPU": "1 * NVIDIA P100",
+            "GPUMemory": "1 * 16"
+        },
+        "ecs.gn5-c28g1.7xlarge": {
+            "CPU": 28,
+            "CPUMemory": 112,
+            "GPU": "1 * NVIDIA P100",
+            "GPUMemory": "1 * 16"
+        },
+        "ecs.gn5-c8g1.4xlarge": {
+            "CPU": 16,
+            "CPUMemory": 120,
+            "GPU": "2 * NVIDIA P100",
+            "GPUMemory": "2 * 16"
+        },
+        "ecs.vgn6i-m4-vws.xlarge": {
+            "CPU": 4,
+            "CPUMemory": 23,
+            "GPU": "1 * NVIDIA T4/4",
+            "GPUMemory": "1 * 4"
+        },
+        "ecs.vgn6i-m8-vws.2xlarge": {
+            "CPU": 10,
+            "CPUMemory": 46,
+            "GPU": "1 * NVIDIA T4/2",
+            "GPUMemory": "1 * 8"
+        },
+        "ecs.gn6i-c4g1.xlarge": {
+            "CPU": 4,
+            "CPUMemory": 15,
+            "GPU": "1 * NVIDIA T4",
+            "GPUMemory": "1 * 16"
+        },
+        "ecs.gn6i-c8g1.2xlarge": {
+            "CPU": 8,
+            "CPUMemory": 31,
+            "GPU": "1 * NVIDIA T4",
+            "GPUMemory": "1 * 16"
+        },
+        "ecs.gn6i-c16g1.4xlarge": {
+            "CPU": 16,
+            "CPUMemory": 62,
+            "GPU": "1 * NVIDIA T4",
+            "GPUMemory": "1 * 16"
+        },
+        "ecs.gn6i-c24g1.6xlarge": {
+            "CPU": 24,
+            "CPUMemory": 93,
+            "GPU": "1 * NVIDIA T4",
+            "GPUMemory": "1 * 16"
+        },
+        "ecs.gn6i-c24g1.12xlarge": {
+            "CPU": 48,
+            "CPUMemory": 186,
+            "GPU": "2 * NVIDIA T4",
+            "GPUMemory": "2 * 16"
+        },
+        "ecs.gn6i-c24g1.24xlarge": {
+            "CPU": 96,
+            "CPUMemory": 372,
+            "GPU": "4 * NVIDIA T4",
+            "GPUMemory": "4 * 16"
+        },
+        "ecs.vgn7i-vws-m4.xlarge": {
+            "CPU": 4,
+            "CPUMemory": 30,
+            "GPU": "1 * NVIDIA A10*1/6",
+            "GPUMemory": "1 * 4"
+        },
+        "ecs.vgn7i-vws-m8.2xlarge": {
+            "CPU": 10,
+            "CPUMemory": 62,
+            "GPU": "1 * NVIDIA A10*1/3",
+            "GPUMemory": "1 * 8"
+        },
+        "ecs.vgn7i-vws-m12.3xlarge": {
+            "CPU": 14,
+            "CPUMemory": 93,
+            "GPU": "1 * NVIDIA A10*1/2",
+            "GPUMemory": "1 * 12"
+        },
+        "ecs.gn7i-c8g1.2xlarge": {
+            "CPU": 8,
+            "CPUMemory": 30,
+            "GPU": "1 * NVIDIA A10",
+            "GPUMemory": "1 * 24"
+        },
+        "ecs.gn7i-c16g1.4xlarge": {
+            "CPU": 16,
+            "CPUMemory": 60,
+            "GPU": "1 * NVIDIA A10",
+            "GPUMemory": "1 * 24"
+        },
+        "ecs.gn7i-c32g1.8xlarge": {
+            "CPU": 32,
+            "CPUMemory": 188,
+            "GPU": "1 * NVIDIA A10",
+            "GPUMemory": "1 * 24"
+        },
+        "ecs.gn7i-c32g1.16xlarge": {
+            "CPU": 64,
+            "CPUMemory": 376,
+            "GPU": "2 * NVIDIA A10",
+            "GPUMemory": "2 * 24"
+        },
+        "ecs.gn7i-c32g1.32xlarge": {
+            "CPU": 128,
+            "CPUMemory": 752,
+            "GPU": "4 * NVIDIA A10",
+            "GPUMemory": "4 * 24"
+        },
+        "ecs.gn6v-c8g1.2xlarge": {
+            "CPU": 8,
+            "CPUMemory": 32,
+            "GPU": "1 * NVIDIA V100",
+            "GPUMemory": "1 * 16"
+        },
+        "ecs.gn6v-c8g1.4xlarge": {
+            "CPU": 16,
+            "CPUMemory": 64,
+            "GPU": "2 * NVIDIA V100",
+            "GPUMemory": "2 * 16"
+        },
+        "ecs.gn6v-c8g1.8xlarge": {
+            "CPU": 32,
+            "CPUMemory": 128,
+            "GPU": "4 * NVIDIA V100",
+            "GPUMemory": "4 * 16"
+        },
+        "ecs.gn6v-c10g1.20xlarge": {
+            "CPU": 82,
+            "CPUMemory": 336,
+            "GPU": "8 * NVIDIA V100",
+            "GPUMemory": "8 * 16"
+        },
+        "ecs.gn6e-c12g1.3xlarge": {
+            "CPU": 12,
+            "CPUMemory": 92,
+            "GPU": "1 * NVIDIA V100",
+            "GPUMemory": "1 * 32"
+        },
+        "ecs.gn6e-c12g1.12xlarge": {
+            "CPU": 48,
+            "CPUMemory": 368,
+            "GPU": "4 * NVIDIA V100",
+            "GPUMemory": "4 * 32"
+        },
+        "ecs.gn6e-c12g1.24xlarge": {
+            "CPU": 96,
+            "CPUMemory": 736,
+            "GPU": "8 * NVIDIA V100",
+            "GPUMemory": "8 * 32"
+        }
+    }
+}
