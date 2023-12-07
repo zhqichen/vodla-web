@@ -1,361 +1,317 @@
 'use client';
 
-import { useState } from 'react';
-import { Flex, Select, Button, Space, Collapse, Form, Card, Input, InputNumber, Switch, Radio, message, Table, Divider, Row, Col, Popover, Empty, Spin } from 'antd';
+import React, { useEffect, useState, useRef } from 'react';
+import { Flex, Select, Button, Space, Collapse, Form, Card, Input, InputNumber, Switch, Radio, message, Table, Divider, Row, Col, Popover, Empty, Spin, Modal, Upload } from 'antd';
+import { useRouter } from 'next/navigation';
 import { InfoCircleOutlined } from '@ant-design/icons';
+import { useSearchParams } from "next/navigation";
 
 import config from "./config.json";
 
+const { TextArea } = Input;
 
 const Inference: React.FC = () => {
+    const router = useRouter();
+    const searchParams = useSearchParams()
+
     const [spinning, setSpinning] = useState<boolean>(false);
-    const [currentModel, setCurrentModel] = useState<string>('llama_7b');
-    const [currentHardwares, setCurrentHardwares] = useState<string[]>(['V100', "A10"]);
+    const [currentModel, setCurrentModel] = useState<string>('');
+    const [currentHardwares, setCurrentHardwares] = useState<string[]>(['A10']);
     const [results, setResults] = useState<object>({});
     const [messageApi, contextHolder] = message.useMessage();
     const [form] = Form.useForm();
     const [estimateRecColumns, setEstimateRecColumns] = useState<object[]>([]);
     const [configurationColumns, setConfigurationColumns] = useState<object[]>([]);
+    const [deploymentOpen, setDeploymentOpen] = useState<boolean>(false);
+    const [currentDeployRecord, setCurrentDeployRecord] = useState<object>({});
+    const [deployForm] = Form.useForm();
+    const [deployMethod, setDeployMethod] = useState<string>('processor');
+    const [modelType, setModelType] = useState<string>('customized');
+    const [selectedEstimateRecKeys, setSelectedEstimateRecKeys] = useState<React.Key[]>([]);
+    const [selectedEstimateRecRows, setSelectedEstimateRecRows] = useState<object[]>([]);
+    const [models, setModels] = useState<object[]>([]);
+    const [modelConfig, setModelConfig] = useState<object>({});
 
-    const modelConfig = config.models;
-    const hardwareConfig = config.hardwares;
-    const regionConfig = config.regions;
-    const models = Object.keys(modelConfig).map(value => {return { value, label: value }});
-    const hardwares = Object.keys(hardwareConfig).map(value => {return { value, label: value }});
-    const regions = regionConfig.map(value => {return { value, label: value }});
+    const [hardwareConfig, setHardwareConfig] = useState<object>({});
+    const [hardwares, setHardwares] = useState<object[]>([]);
+
+    const [regions, setRegions] = useState<[]>([]);
+    const [currentRegion, setCurrentRegion] = useState<string>('us-east-1');
+
+
+    // setModels(Object.keys(modelConfig).map(value => {return { value, label: value }}));
     const nodeInfosConfig = config.nodeInfos;
 
+    useEffect(() => {
+        // 获取 ModelList
+        getModelList();
+        getConfig();
+
+        // 获取URL的参数
+        // let modelName = GetQueryString('modelName');
+        // if (modelName) {
+        //     //TODO: 设置参数
+        //     setCurrentModel(modelName)
+        //     // 手动 Evaluate
+        //     handleProfileSubmit();
+        // }
+    }, []);
+
+    function GetQueryString(name) {
+        var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+        var r = window.location.search.substr(1).match(reg); //获取url中"?"符后的字符串并正则匹配
+        var context = "";
+        if (r != null)
+            context = decodeURIComponent(r[2]);
+        reg = null;
+        r = null;
+        return context == null || context == "" || context == "undefined" ? "" : context;
+    }
+
+    const getModelList = async () => {
+        let configs = {}
+        let models = []
+        let currentModel = ''
+        let currentModelID = 0
+        const res = await fetch('/api/get_model_list')
+    
+        if (res.ok) {
+            try {
+                let temp = await res.json();
+                if (temp.success) {
+                    models = temp.data?.map((item) => {
+                        let con = JSON.parse(item?.configs || '{}')
+                        con['model_id'] = item?.model_id
+                        configs[item?.model_name] = con;
+                        return  { value: item?.model_name, label: item?.model_name }
+                    })
+                    let modelName = searchParams.get('modelName') || '';
+                    currentModel = modelName || temp.data[0]?.model_name;
+                    currentModelID = temp.data[0]?.model_id;
+                    setModels(models);
+                    setCurrentModel(currentModel);
+                    setModelConfig(configs)
+                    updateModelConfigs(configs, currentModel);
+
+                    // if (modelName) {
+                    //     setTimeout(() => {
+                    //         handleProfileSubmit();
+                    //     }, 2000);
+                    // }
+                } else {
+                    messageApi.info('模型列表获取接口不可用', [5]);
+                }
+
+                let message = {
+                    success: temp?.success,
+                    message: new Date().toLocaleString() + ' 调用接口【get_model_list】：' + (temp?.message || '获取模型列表')
+                }
+                sessionStorage.setItem('actionLogs', JSON.stringify([message, ...(JSON.parse(sessionStorage.getItem('actionLogs')  || '[]'))]))
+            } catch (error) {
+                console.log(error)
+                messageApi.error('模型列表获取接口出错', [5]);
+
+                let message = {
+                    success: false,
+                    message: new Date().toLocaleString() + ' 调用接口【get_model_list】：' + (error || "获取模型列表接口失败")
+                }
+                sessionStorage.setItem('actionLogs', JSON.stringify([message, ...(JSON.parse(sessionStorage.getItem('actionLogs') || '[]'))]))
+            }
+        } else {
+            messageApi.error('请求发送失败', [5]);
+
+            let message = {
+                success: false,
+                message: new Date().toLocaleString() + ' 调用接口【get_model_list】：' + ("获取模型列表接口失败")
+            }
+            sessionStorage.setItem('actionLogs', JSON.stringify([message, ...(JSON.parse(sessionStorage.getItem('actionLogs') || '[]'))]))
+        }
+    };
+
+    const getConfig = async () => {
+        let res = await fetch('/api/get_hardware_list');
+        if (res.ok) {
+            try {
+                let temp = await res.json();
+                if (temp.success) {
+                    setHardwareConfig(temp.data)
+                    setHardwares(Object.keys(temp.data).map(value => {return { value, label: value }}))
+                    setCurrentHardwares(Object.keys(temp.data)[0] ? [Object.keys(temp.data)[0]] : [])
+                }
+
+                let message = {
+                    success: temp?.success,
+                    message: new Date().toLocaleString() + ' 调用接口【get_hardware_list】：' + (temp?.message || '获取硬件列表')
+                }
+                sessionStorage.setItem('actionLogs', JSON.stringify([message, ...(JSON.parse(sessionStorage.getItem('actionLogs')  || '[]'))]))
+            } catch (error) {
+                let message = {
+                    success: false,
+                    message: new Date().toLocaleString() + ' 调用接口【get_hardware_list】：' + (error || '获取硬件列表接口失败')
+                }
+                sessionStorage.setItem('actionLogs', JSON.stringify([message, ...(JSON.parse(sessionStorage.getItem('actionLogs')  || '[]'))]))
+            
+            }
+        } else {
+            let message = {
+                success: false,
+                message: new Date().toLocaleString() + ' 调用接口【get_hardware_list】：' + ('获取硬件列表接口失败')
+            }
+            sessionStorage.setItem('actionLogs', JSON.stringify([message, ...(JSON.parse(sessionStorage.getItem('actionLogs')  || '[]'))]))
+        
+        }
+
+        res = await fetch('/api/get_region_list');
+        if (res.ok) {
+            try {
+                let temp = await res.json();
+                if (temp.success) {
+                    setRegions(temp?.data?.regions.map(value => {return { value, label: value }}))
+                    form.setFieldValue('region', temp?.data?.regions[0])
+                }
+
+                let message = {
+                    success: temp?.success,
+                    message: new Date().toLocaleString() + ' 调用接口【get_region_list】：' + (temp?.message || '获取地区列表')
+                }
+                sessionStorage.setItem('actionLogs', JSON.stringify([message, ...(JSON.parse(sessionStorage.getItem('actionLogs')  || '[]'))]))
+            } catch(error) {
+                let message = {
+                    success: false,
+                    message: new Date().toLocaleString() + ' 调用接口【get_region_list】：' + (error || '获取地区列表接口失败')
+                }
+                sessionStorage.setItem('actionLogs', JSON.stringify([message, ...(JSON.parse(sessionStorage.getItem('actionLogs')  || '[]'))]))
+            }
+        } else {
+            let message = {
+                success: false,
+                message: new Date().toLocaleString() + ' 调用接口【get_region_list】：' + ('获取地区列表接口失败')
+            }
+            sessionStorage.setItem('actionLogs', JSON.stringify([message, ...(JSON.parse(sessionStorage.getItem('actionLogs')  || '[]'))]))
+        }
+    }
 
     const handleModelChange = (value: string) => {
-        form.resetFields();
         setCurrentModel(value);
+        updateModelConfigs(modelConfig, value);
     };
+
+    const updateModelConfigs = (modelConfig, value) => {
+        form.setFieldsValue({
+            "family": modelConfig[value]?.family || '',
+            "num_layers": modelConfig[value]?.num_layers,
+            "n_head": modelConfig[value]?.n_head,
+            "hidden_dim": modelConfig[value]?.hidden_dim,
+            "vocab_size": modelConfig[value]?.vocab_size,
+            "max_seq_len": modelConfig[value]?.max_seq_len,
+            "mlp_dim": modelConfig[value]?.mlp_dim
+        })
+    }
+
     const handleHardwareChange = (value: string[]) => {
         setCurrentHardwares(value);
     };
     const handleProfileSubmit = async () => {
-        // setSpinning(true);
-        // const configs = form.getFieldsValue()
-        // const params = {
-        //     "ModelDetails":{
-        //         "num_layers": configs.num_layers,
-        //         "n_head": configs.n_head,
-        //         "hidden_dim": configs.hidden_dim,
-        //         "vocab_size": configs.vocab_size,
-        //         "max_seq_len": configs.max_seq_len,
-        //         "mlp_dim": configs.mlp_dim,
-        //         "family": configs.family
-        //     },
-        //     "HardWares": currentHardwares,
-        //     "InferenceConfig": {
-        //         "batch_size": configs.batch_size,
-        //         "seq_len": configs.seq_len,
-        //         "output_len": configs.output_len,
-        //         "tp": configs.tp,
-        //         "pp": configs.pp,
-        //         // "use_kv_cache": configs.use_kv_cache,
-        //         "optimizations": configs.optimizations.toString(),
-        //         "algorithm": configs.algorithm,
-        //         "elem_size": configs.elem_size,
-        //         "dt": configs.dt
-        //     },        
-        //     "ModelConfig": { 
-        //         "Framework": configs.algorithm,
-        //         "FrameworkVersion": configs.FrameworkVersion,
-        //         "NearestModelName": currentModel
-        //     },
-        //     "SLAConfig": { 
-        //         "MaxLatencyThresholdsInMilliseconds": configs.MaxLatencyThresholdsInMilliseconds,
-        //     },
-        //     "ContainerConfig": { 
-        //         "EnvironmentVariables": {"env1": 1, "env2": 2},
-        //         "ServerlessConfig": {"MemorySizeInGB": 64, "JobDurationInSeconds": 3000}
-        //     },
-        //     "auto_parallelism": configs.auto_parallelism,
-        //     "region": configs.region
-        // }
-        // const res = await fetch('/api/estimate', {
-        //     method: 'POST',
-        //     body: JSON.stringify(params)
-        // })
-    
-        // if (res.ok) {
-        //     try {
-        //         let temp = await res.json();
-        //         handleTableColumns(temp);
-        //         setResults(temp);
-        //         setSpinning(false);
-        //         messageApi.success('Profile success!');
-        //     } catch (error) {
-        //         setResults({});
-        //         setSpinning(false);
-        //         messageApi.info('There are no results under this configuration!');
-        //     }
-        // } else {
-        //     setResults({});
-        //     setSpinning(false);
-        //     messageApi.error('Interface error!');
-        // }
-
-        // Mock
-        let temp = {
-            "estimate_rec": [
-                {
-                    "tokens/s": 1.8297760411319486,
-                    "latency(ms)": "546.51 ms",
-                    "cpu_cores": 1,
-                    "cpu_memory(G)": "10",
-                    "gpu_type": "1 * V100",
-                    "gpu_memory(G)": "1 * 12.0800",
-                    "gpu_tflops": "1 * 0.0121",
-                    "tp*pp": "1 * 1"
-                },
-                {
-                    "tokens/s": 2.8690811476043776,
-                    "latency(ms)": "348.54 ms",
-                    "cpu_cores": 1,
-                    "cpu_memory(G)": "10",
-                    "gpu_type": "2 * V100",
-                    "gpu_memory(G)": "2 * 6.0400",
-                    "gpu_tflops": "2 * 0.0062",
-                    "tp*pp": "2 * 1"
-                },
-                {
-                    "tokens/s": 4.2122403499585275,
-                    "latency(ms)": "237.4 ms",
-                    "cpu_cores": 1,
-                    "cpu_memory(G)": "10",
-                    "gpu_type": "4 * V100",
-                    "gpu_memory(G)": "4 * 3.0200",
-                    "gpu_tflops": "4 * 0.0032",
-                    "tp*pp": "4 * 1"
-                },
-                {
-                    "tokens/s": 3.8874225408663525,
-                    "latency(ms)": "257.24 ms",
-                    "cpu_cores": 1,
-                    "cpu_memory(G)": "10",
-                    "gpu_type": "8 * V100",
-                    "gpu_memory(G)": "8 * 1.5100",
-                    "gpu_tflops": "8 * 0.0017",
-                    "tp*pp": "8 * 1"
-                },
-                {
-                    "tokens/s": 1.220046352208271,
-                    "latency(ms)": "819.64 ms",
-                    "cpu_cores": 1,
-                    "cpu_memory(G)": "10",
-                    "gpu_type": "1 * A10",
-                    "gpu_memory(G)": "1 * 12.0800",
-                    "gpu_tflops": "1 * 0.0121",
-                    "tp*pp": "1 * 1"
-                },
-                {
-                    "tokens/s": 2.039007318879225,
-                    "latency(ms)": "490.43 ms",
-                    "cpu_cores": 1,
-                    "cpu_memory(G)": "10",
-                    "gpu_type": "2 * A10",
-                    "gpu_memory(G)": "2 * 6.0400",
-                    "gpu_tflops": "2 * 0.0062",
-                    "tp*pp": "2 * 1"
-                },
-                {
-                    "tokens/s": 3.132469856217753,
-                    "latency(ms)": "319.24 ms",
-                    "cpu_cores": 1,
-                    "cpu_memory(G)": "10",
-                    "gpu_type": "4 * A10",
-                    "gpu_memory(G)": "4 * 3.0200",
-                    "gpu_tflops": "4 * 0.0032",
-                    "tp*pp": "4 * 1"
-                },
-                {
-                    "tokens/s": 3.3351137349693407,
-                    "latency(ms)": "299.84 ms",
-                    "cpu_cores": 1,
-                    "cpu_memory(G)": "10",
-                    "gpu_type": "8 * A10",
-                    "gpu_memory(G)": "8 * 1.5100",
-                    "gpu_tflops": "8 * 0.0017",
-                    "tp*pp": "8 * 1"
-                }
-            ],
-            "configuration": [
-                {
-                    "InstanceId": "ecs.gn6e-c12g1.12xlarge",
-                    "MinModelLatency(ms)": 546.51,
-                    "MaxThroughPut(token/s)": 1.87,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 85.43,
-                    "MinCostPerInference(¥)": 0.01199
-                },
-                {
-                    "InstanceId": "ecs.gn6e-c12g1.3xlarge",
-                    "MinModelLatency(ms)": 546.51,
-                    "MaxThroughPut(token/s)": 1.87,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 341.73,
-                    "MinCostPerInference(¥)": 0.003
-                },
-                {
-                    "InstanceId": "ecs.gn6e-c12g1.24xlarge",
-                    "MinModelLatency(ms)": 546.51,
-                    "MaxThroughPut(token/s)": 1.87,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 42.71,
-                    "MinCostPerInference(¥)": 0.02397
-                },
-                {
-                    "InstanceId": "ecs.gn6v-c10g1.20xlarge",
-                    "MinModelLatency(ms)": 546.51,
-                    "MaxThroughPut(token/s)": 1.87,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 30.71,
-                    "MinCostPerInference(¥)": 0.03334
-                },
-                {
-                    "InstanceId": "ecs.gn6v-c8g1.2xlarge",
-                    "MinModelLatency(ms)": 546.51,
-                    "MaxThroughPut(token/s)": 1.87,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 254.93,
-                    "MinCostPerInference(¥)": 0.00402
-                },
-                {
-                    "InstanceId": "ecs.gn6v-c8g1.8xlarge",
-                    "MinModelLatency(ms)": 546.51,
-                    "MaxThroughPut(token/s)": 1.87,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 63.73,
-                    "MinCostPerInference(¥)": 0.01607
-                },
-                {
-                    "InstanceId": "ecs.gn6e-c12g1.12xlarge",
-                    "MinModelLatency(ms)": 348.54,
-                    "MaxThroughPut(token/s)": 2.94,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 133.95,
-                    "MinCostPerInference(¥)": 0.00764
-                },
-                {
-                    "InstanceId": "ecs.gn6e-c12g1.24xlarge",
-                    "MinModelLatency(ms)": 348.54,
-                    "MaxThroughPut(token/s)": 2.94,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 66.98,
-                    "MinCostPerInference(¥)": 0.01529
-                },
-                {
-                    "InstanceId": "ecs.gn6v-c10g1.20xlarge",
-                    "MinModelLatency(ms)": 348.54,
-                    "MaxThroughPut(token/s)": 2.94,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 48.15,
-                    "MinCostPerInference(¥)": 0.02126
-                },
-                {
-                    "InstanceId": "ecs.gn6v-c8g1.8xlarge",
-                    "MinModelLatency(ms)": 348.54,
-                    "MaxThroughPut(token/s)": 2.94,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 99.93,
-                    "MinCostPerInference(¥)": 0.01025
-                },
-                {
-                    "InstanceId": "ecs.gn6e-c12g1.12xlarge",
-                    "MinModelLatency(ms)": 237.4,
-                    "MaxThroughPut(token/s)": 4.31,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 196.66,
-                    "MinCostPerInference(¥)": 0.00521
-                },
-                {
-                    "InstanceId": "ecs.gn6e-c12g1.24xlarge",
-                    "MinModelLatency(ms)": 237.4,
-                    "MaxThroughPut(token/s)": 4.31,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 98.33,
-                    "MinCostPerInference(¥)": 0.01041
-                },
-                {
-                    "InstanceId": "ecs.gn6v-c10g1.20xlarge",
-                    "MinModelLatency(ms)": 237.4,
-                    "MaxThroughPut(token/s)": 4.31,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 70.7,
-                    "MinCostPerInference(¥)": 0.01448
-                },
-                {
-                    "InstanceId": "ecs.gn6v-c8g1.8xlarge",
-                    "MinModelLatency(ms)": 237.4,
-                    "MaxThroughPut(token/s)": 4.31,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 146.71,
-                    "MinCostPerInference(¥)": 0.00698
-                },
-                {
-                    "InstanceId": "ecs.gn6e-c12g1.24xlarge",
-                    "MinModelLatency(ms)": 257.24,
-                    "MaxThroughPut(token/s)": 3.98,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 90.75,
-                    "MinCostPerInference(¥)": 0.01128
-                },
-                {
-                    "InstanceId": "ecs.gn6v-c10g1.20xlarge",
-                    "MinModelLatency(ms)": 257.24,
-                    "MaxThroughPut(token/s)": 3.98,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 65.25,
-                    "MinCostPerInference(¥)": 0.01569
-                },
-                {
-                    "InstanceId": "ecs.gn7i-c8g1.2xlarge",
-                    "MinModelLatency(ms)": 819.64,
-                    "MaxThroughPut(token/s)": 1.25,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 471.81,
-                    "MinCostPerInference(¥)": 0.00217
-                },
-                {
-                    "InstanceId": "ecs.gn7i-c32g1.16xlarge",
-                    "MinModelLatency(ms)": 819.64,
-                    "MaxThroughPut(token/s)": 1.25,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 168.98,
-                    "MinCostPerInference(¥)": 0.00606
-                },
-                {
-                    "InstanceId": "ecs.gn7i-c16g1.4xlarge",
-                    "MinModelLatency(ms)": 819.64,
-                    "MaxThroughPut(token/s)": 1.25,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 445.6,
-                    "MinCostPerInference(¥)": 0.0023
-                },
-                {
-                    "InstanceId": "ecs.gn7i-c32g1.8xlarge",
-                    "MinModelLatency(ms)": 819.64,
-                    "MaxThroughPut(token/s)": 1.25,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 337.95,
-                    "MinCostPerInference(¥)": 0.00303
-                },
-                {
-                    "InstanceId": "ecs.gn7i-c32g1.32xlarge",
-                    "MinModelLatency(ms)": 819.64,
-                    "MaxThroughPut(token/s)": 1.25,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 84.49,
-                    "MinCostPerInference(¥)": 0.01212
-                },
-                {
-                    "InstanceId": "ecs.gn7i-c32g1.16xlarge",
-                    "MinModelLatency(ms)": 490.43,
-                    "MaxThroughPut(token/s)": 2.09,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 282.41,
-                    "MinCostPerInference(¥)": 0.00363
-                },
-                {
-                    "InstanceId": "ecs.gn7i-c32g1.32xlarge",
-                    "MinModelLatency(ms)": 490.43,
-                    "MaxThroughPut(token/s)": 2.09,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 141.2,
-                    "MinCostPerInference(¥)": 0.00725
-                },
-                {
-                    "InstanceId": "ecs.gn7i-c32g1.32xlarge",
-                    "MinModelLatency(ms)": 319.24,
-                    "MaxThroughPut(token/s)": 3.21,
-                    "MaxKiloTokenPerCost(ktoken/¥)": 216.92,
-                    "MinCostPerInference(¥)": 0.00472
-                }
-            ]
+        setSpinning(true);
+        const configs = form.getFieldsValue()
+        const params = {
+            "ModelDetails":{
+                "num_layers": configs.num_layers,
+                "n_head": configs.n_head,
+                "hidden_dim": configs.hidden_dim,
+                "vocab_size": configs.vocab_size,
+                "max_seq_len": configs.max_seq_len,
+                "mlp_dim": configs.mlp_dim,
+                "family": configs.family || 'family'
+            },
+            "HardWares": currentHardwares,
+            "InferenceConfig": {
+                "batch_size": configs.batch_size,
+                "seq_len": configs.seq_len,
+                "output_len": configs.output_len,
+                "tp": configs.tp,
+                "pp": configs.pp,
+                // "use_kv_cache": configs.use_kv_cache,
+                "optimizations": configs.optimizations.toString(),
+                "algorithm": configs.algorithm,
+                "elem_size": configs.elem_size,
+                "dt": configs.dt
+            },        
+            "ModelConfig": { 
+                "Framework": configs.algorithm,
+                "FrameworkVersion": configs.FrameworkVersion,
+                "NearestModelName": currentModel
+            },
+            "SLAConfig": { 
+                "MaxLatencyThresholdsInMilliseconds": configs.MaxLatencyThresholdsInMilliseconds,
+            },
+            "ContainerConfig": { 
+                "EnvironmentVariables": {"env1": 1, "env2": 2},
+                "ServerlessConfig": {"MemorySizeInGB": 64, "JobDurationInSeconds": 3000}
+            },
+            "auto_parallelism": configs.auto_parallelism,
+            "region": configs.region,
+            "model_id": modelConfig[currentModel]?.model_id
         }
-        handleTableColumns(temp);
-        setResults(temp);
+        console.log(params)
+        const res = await fetch('/api/estimate', {
+            method: 'POST',
+            body: JSON.stringify(params)
+        })
+    
+        if (res.ok) {
+            try {
+                let temp = await res.json();
+                if (temp.success) {
+                    handleTableColumns(temp.data);
+                    setResults(temp.data);
+                    setSpinning(false);
+                    messageApi.success('模型评估成功');
+                } else {
+                    messageApi.info('模型评估接口不可用', [5]);
+                }
+
+                let message = {
+                    success: temp?.success,
+                    message: new Date().toLocaleString() + ' 调用接口【estimate】：' + (temp?.message || '评估模型')
+                }
+                sessionStorage.setItem('actionLogs', JSON.stringify([message, ...(JSON.parse(sessionStorage.getItem('actionLogs')  || '[]'))]))
+            } catch (error) {
+                setResults({});
+                setSpinning(false);
+                messageApi.error('模型评估接口出错', [5]);
+
+                let message = {
+                    success: false,
+                    message: new Date().toLocaleString() + ' 调用接口【estimate】：' + (error || '评估模型接口失败')
+                }
+                sessionStorage.setItem('actionLogs', JSON.stringify([message, ...(JSON.parse(sessionStorage.getItem('actionLogs')  || '[]'))]))
+            }
+        } else {
+            setResults({});
+            setSpinning(false);
+            messageApi.error('请求发送失败', [5]);
+
+            let message = {
+                success: false,
+                message: new Date().toLocaleString() + ' 调用接口【estimate】：' + ('评估模型接口失败')
+            }
+            sessionStorage.setItem('actionLogs', JSON.stringify([message, ...(JSON.parse(sessionStorage.getItem('actionLogs')  || '[]'))]))
+
+            // Mock
+            // let temp = mockData;
+            // handleTableColumns(temp);
+            // setResults(temp);
+            // setSpinning(false);
+            // messageApi.success('Profile success!');
+        }
+
+
     };
     const handleTableColumns = (results) => {
+        setEstimateRecColumns([]);
+        setConfigurationColumns([]);
+
         let estimateRecColumns: any[] | ((prevState: object[]) => object[]) = [];
         let configurationColumns: any[] | ((prevState: object[]) => object[]) = [];
         let estimateRecColumnsChildrenFirst = {
@@ -404,10 +360,15 @@ const Inference: React.FC = () => {
                     key: 'x',
                     width: 120,
                     align: 'center',
-                    render: () => <Button type="primary" size='small'> Deploy </Button>,
+                    render: (_, record) => <a onClick={() => {
+                        setCurrentDeployRecord(record);
+                        setDeploymentOpen(true)
+                    }
+                    }> Deploy </a>,
                 }])
                 setEstimateRecColumns(estimateRecColumns);
-            } else if (resultKey == 'configuration') {
+
+            } else if (resultKey == 'configuration' && results[resultKey].length != 0) {
                 Object.keys(results[resultKey][0]).forEach(item => {
                     if (item == 'InstanceId') {
                         configurationColumns.push({
@@ -442,18 +403,114 @@ const Inference: React.FC = () => {
                     }
         
                 })
-                configurationColumns = configurationColumns.concat([{
-                    title: 'Action',
-                    dataIndex: '',
-                    key: 'x',
-                    width: 120,
-                    align: 'center',
-                    render: () => <Button type="primary" size='small'> Deploy </Button>,
-                }])
-                setConfigurationColumns(configurationColumns);
+                // configurationColumns = configurationColumns.concat([{
+                //     title: 'Action',
+                //     dataIndex: '',
+                //     key: 'x',
+                //     width: 120,
+                //     align: 'center',
+                //     render: () => <Button type="primary" size='small'> Deploy </Button>,
+                 // }])
+               setConfigurationColumns(configurationColumns);
             }
         });
     }
+    const handleDeploySubmit = async () => {
+        setDeploymentOpen(false);
+
+        setSpinning(true);
+        const configs = deployForm.getFieldsValue()
+        let params = {return_data: []}
+        if (JSON.stringify(currentDeployRecord) == '{}') {
+            params.return_data = selectedEstimateRecRows.map(row => {
+                return {
+                    // 'metrics':  configs.metrics,
+                    'expectedLatency':  configs.expectedLatency,
+                    'service_user': configs.service_user,
+                    'expectedThroughput':  configs.expectedThroughput,
+                    'cpu_cores':  row['cpu_cores'],
+                    'cpu_memory': row['cpu_memory'],
+                    'gpu_type': row['gpu_type']?.split("*")[1].trim(),
+                    'tflops': row['gpu_tflops'],
+                    'tp*pp': row['tp*pp'],
+                    'gpu_memory': row['gpu_memory(G)']?.split("*")[1].trim(),
+                    'model_id': modelConfig[currentModel]?.model_id,
+                    'user_id': -1
+                }
+            })
+            
+        } else {
+            params.return_data.push({
+                // 'metrics':  configs.metrics,
+                'expectedLatency':  configs.expectedLatency,
+                'service_user': configs.service_user,
+                'expectedThroughput':  configs.expectedThroughput,
+                'cpu_cores':  currentDeployRecord['cpu_cores'],
+                'cpu_memory': currentDeployRecord['cpu_memory'],
+                'gpu_type': currentDeployRecord['gpu_type']?.split("*")[1].trim(),
+                'tflops': currentDeployRecord['gpu_tflops'],
+                'tp*pp': currentDeployRecord['tp*pp'],
+                'gpu_memory': currentDeployRecord['gpu_memory(G)']?.split("*")[1].trim(),
+                'model_id': modelConfig[currentModel]?.model_id,
+                'user_id': -1
+            })
+        }
+
+        const res = await fetch('/api/launch', {
+            method: 'POST',
+            body: JSON.stringify({return_data: params.return_data})
+        })
+    
+        if (res.ok) {
+            try {
+                let temp = await res.json();
+                setSpinning(false);
+                messageApi.success('部署成功');
+                // router.push(`/onlineService`);
+                location.href = "/onlineService"
+
+                let message = {
+                    success: temp?.success,
+                    message: new Date().toLocaleString() + ' 调用接口【launch】：' + (temp?.message || '评估模型部署')
+                }
+                sessionStorage.setItem('actionLogs', JSON.stringify([message, ...(JSON.parse(sessionStorage.getItem('actionLogs')  || '[]'))]))
+
+            } catch (error) {
+                setSpinning(false);
+                setDeploymentOpen(true);
+                messageApi.info('部署接口出错', [5]);
+
+                let message = {
+                    success: false,
+                    message: new Date().toLocaleString() + ' 调用接口【launch】：' + (error || '评估模型部署接口失败')
+                }
+                sessionStorage.setItem('actionLogs', JSON.stringify([message, ...(JSON.parse(sessionStorage.getItem('actionLogs')  || '[]'))]))
+            }
+        } else {
+            setSpinning(false);
+            setDeploymentOpen(true);
+            messageApi.error('请求发送失败', [5]);
+
+            // setSpinning(false);
+            // messageApi.success('Deployment submitted!');
+            // //TODO: 获取服务 ids 跳转
+            let message = {
+                success: false,
+                message: new Date().toLocaleString() + ' 调用接口【launch】：' + ('评估模型部署接口失败')
+            }
+            sessionStorage.setItem('actionLogs', JSON.stringify([message, ...(JSON.parse(sessionStorage.getItem('actionLogs')  || '[]'))]))
+        }
+        
+    }
+
+    const onSelectEstimateRecChange = (keys, rows) => {
+        // console.log('selectedRowKeys changed: ', rows);
+        setCurrentDeployRecord({})
+        setSelectedEstimateRecKeys(keys);
+        setSelectedEstimateRecRows(rows);
+    }
+
+    const hasEstimateRecSelected = selectedEstimateRecRows.length > 0;
 
     return (
         <Spin tip="Loading" spinning={spinning} size="large">
@@ -475,15 +532,15 @@ const Inference: React.FC = () => {
                         <Col span={5}>
                             <span>Name&nbsp;&nbsp;&nbsp;&nbsp;</span>
                             <Select
-                                defaultValue={ currentModel }
+                                value={ currentModel }
                                 style={{ width: 140 }}
                                 onChange={ handleModelChange }
                                 options={ models }
                             />
                         </Col>
                         <Col span={5}>
-                            <Form.Item name="family" label="Family" initialValue={ modelConfig[currentModel].family }>
-                                <Input style={{ width: 100 }}/>
+                            <Form.Item name="family" label="Family">
+                                <Input style={{ width: 100 }} />
                             </Form.Item>
                         </Col>
                         <Col span={5}>
@@ -500,7 +557,7 @@ const Inference: React.FC = () => {
 
                         <Col span={2}></Col>
                         <Col span={5}>
-                            <Form.Item name="seq_len" label="Sequence Length" initialValue={16}>
+                            <Form.Item name="seq_len" label="Input Length" initialValue={16}>
                                 <InputNumber />
                             </Form.Item>
                         </Col>
@@ -516,6 +573,15 @@ const Inference: React.FC = () => {
                         </Col>
                         <Col span={7}></Col>
 
+                        <Col span={2}>
+                            <span style={{ fontWeight: "bold" }}>Expect: </span>
+                        </Col>
+                        <Col span={5}>
+                            <Form.Item name="MaxLatencyThresholdsInMilliseconds" label="Expect Latency (ms)" initialValue={500}>
+                                <InputNumber />
+                            </Form.Item>
+                        </Col>
+                        <Col span={17}></Col>
                     
                         <Col span={2}>
                             <span style={{ fontWeight: "bold" }}>Framework: </span>
@@ -543,7 +609,7 @@ const Inference: React.FC = () => {
                             <span style={{ fontWeight: "bold" }}>Hardwares: </span>
                         </Col>
                         <Col span={5}>
-                            <Form.Item name="region" label="Region" initialValue={regions[1].value}>
+                            <Form.Item name="region" label="Region" initialValues={currentRegion}>
                                 <Select
                                     style={{ width: 160 }}
                                     options={ regions }
@@ -555,14 +621,14 @@ const Inference: React.FC = () => {
                             <Select
                                 mode="multiple"
                                 allowClear
-                                defaultValue={ currentHardwares }
+                                value={ currentHardwares }
                                 style={{ minWidth: 400, maxWidth: 500, }}
                                 onChange={ handleHardwareChange }
                                 options={ hardwares }
                             />
                         </Col>
                         <Col span={3}>
-                            <Button type="primary" size="normal" onClick={ handleProfileSubmit }>Profile</Button>
+                            <Button type="primary" size="normal" onClick={ handleProfileSubmit }>Evaluate</Button>
                         </Col>
 
 
@@ -570,22 +636,22 @@ const Inference: React.FC = () => {
                             <Collapse size="small" items={[{ key: '1', label: 'Config', forceRender: true, children: (
                                     <Space align="start" style={{ width: '100%', overflowX: 'auto', paddingBottom: 6 }}>
                                         <Card size="small" title={ `${currentModel} 模型参数` } >
-                                            <Form.Item style={{marginBottom: 10}} name="num_layers" label="Layers" initialValue={ modelConfig[currentModel].num_layers }>
+                                            <Form.Item style={{marginBottom: 10}} name="num_layers" label="Layers">
                                                 <InputNumber />
                                             </Form.Item>
-                                            <Form.Item style={{marginBottom: 10}} name="n_head" label="Heads" initialValue={ modelConfig[currentModel].n_head }>
+                                            <Form.Item style={{marginBottom: 10}} name="n_head" label="Heads">
                                                 <InputNumber/>
                                             </Form.Item>
-                                            <Form.Item style={{marginBottom: 10}} name="hidden_dim" label="Hidden Dim Size" initialValue={ modelConfig[currentModel].hidden_dim }>
+                                            <Form.Item style={{marginBottom: 10}} name="hidden_dim" label="Hidden Dim Size">
                                                 <InputNumber/>
                                             </Form.Item>
-                                            <Form.Item style={{marginBottom: 10}} name="vocab_size" label="Vocabulary Size" initialValue={ modelConfig[currentModel].vocab_size }>
+                                            <Form.Item style={{marginBottom: 10}} name="vocab_size" label="Vocabulary Size">
                                                 <InputNumber/>
                                             </Form.Item>
-                                            <Form.Item style={{marginBottom: 10}} name="max_seq_len" label="Max Sequence Length" initialValue={ modelConfig[currentModel].max_seq_len }>
+                                            <Form.Item style={{marginBottom: 10}} name="max_seq_len" label="Max Sequence Length">
                                                 <InputNumber/>
                                             </Form.Item>
-                                            <Form.Item style={{marginBottom: 10}} name="mlp_dim" label="MLP Dim Size" initialValue={ modelConfig[currentModel].mlp_dim }>
+                                            <Form.Item style={{marginBottom: 10}} name="mlp_dim" label="MLP Dim Size">
                                                 <InputNumber/>
                                             </Form.Item>
                                         </Card>
@@ -599,9 +665,6 @@ const Inference: React.FC = () => {
                                             </Form.Item>
                                             <Form.Item style={{marginBottom: 10}} name="auto_parallelism" label="Auto Parallelism" valuePropName="checked" initialValue={ true }>
                                                 <Switch />
-                                            </Form.Item>
-                                            <Form.Item style={{marginBottom: 10}} name="MaxLatencyThresholdsInMilliseconds" label="Expect Latency (ms)" initialValue={500}>
-                                                <InputNumber />
                                             </Form.Item>
                                             {/* <Form.Item style={{marginBottom: 10}} name="use_kv_cache" label="Use KV Cache" valuePropName="checked" initialValue={ true }>
                                                 <Switch />
@@ -632,7 +695,7 @@ const Inference: React.FC = () => {
                                     pagination={false}
                                     style={{ marginBottom: 20 }}
                                     columns={
-                                            Object.keys(hardwareConfig[currentHardwares[0]]).map(key => {
+                                        currentHardwares.length && hardwareConfig && hardwareConfig[currentHardwares[0]] && Object.keys( hardwareConfig[currentHardwares[0]]).map(key => {
                                                 return {
                                                     title: key == 'name' ? 'Chip Name' : key.replace(/_/g, ' ').replace(/\b\w|\s\w/g, fw => {
                                                         return fw.toUpperCase()
@@ -646,8 +709,9 @@ const Inference: React.FC = () => {
                                         )
                                     }
                                     dataSource={ currentHardwares.map(item => {
-                                        hardwareConfig[item] = {'name': item, ...hardwareConfig[item]}
-                                        return hardwareConfig[item]
+                                            hardwareConfig[item] = {'name': item, ...hardwareConfig[item]}
+                                            return hardwareConfig[item]
+                                        
                                     })}
                                 />
                             ) }]} />
@@ -661,22 +725,92 @@ const Inference: React.FC = () => {
                 { ((results && JSON.stringify(results) !== "{}") && Object.keys(results).map(resultKey => (
                         <>
                             <Divider orientation="left" style={{ fontSize: '16px' }}>{ resultKey.replace(/_/g, ' ').replace(/\b\w|\s\w/g, fw => { return fw.toUpperCase() })}</Divider>
+                            { resultKey == 'estimate_rec' && (
+                                <div style={{ marginBottom: 16 }}>
+                                <Button 
+                                    type="primary" 
+                                    onClick={() => {
+                                        setCurrentDeployRecord({})
+                                        setDeploymentOpen(true)
+                                    }} 
+                                    disabled={!hasEstimateRecSelected}>
+                                    Deploy
+                                </Button>
+                                <span style={{ marginLeft: 8 }}>
+                                    {hasEstimateRecSelected ? `Selected ${selectedEstimateRecKeys.length} items` : ''}
+                                </span>
+                                </div>
+                            ) }
                             <Table size="small"
                                 // title={() => resultKey}
                                 bordered
-                                pagination={{ defaultPageSize: 5 }}
+                                scroll={{ y: 'calc(100vh - 200px)' }}
+                                rowKey={(record) => record['tokens/s']}
+                                // pagination={{ defaultPageSize: 5 }}
+                                pagination={false}
+                                rowSelection={ resultKey == 'estimate_rec' ? {
+                                    selectedEstimateRecKeys,
+                                    onChange: onSelectEstimateRecChange,
+                                    // getCheckboxProps: (record) => ({
+                                    //     disabled: selectedEstimateRecKeys?.length >= 2 && !selectedEstimateRecKeys.includes(record.key),
+                                    // })
+                                } : false }
                                 columns={ resultKey == 'estimate_rec' ? estimateRecColumns : configurationColumns }
-                                dataSource={ results[resultKey].map((item: { [x: string]: string; }) => {
+                                dataSource={ results[resultKey].map((item: { [x: string]: string; }, index) => {
                                     if (item['tokens/s']) {
                                         item['tokens/s'] = (Number)(item['tokens/s']).toFixed(2)
                                     }
                                     if (item['latency(ms)']) {
                                         item['latency(ms)'] = item['latency(ms)'].split(' ')[0]
                                     }
+                                    item.key = index
                                     return item;
                                 }) } />
                         </>
-                )) || <Empty imageStyle={{ height: 200 }} /> ) }           
+                )) || <Empty imageStyle={{ height: 200 }} /> ) }
+
+
+                    <Modal
+                        title="Deployment parameters"
+                        centered
+                        destroyOnClose
+                        maskClosable={false}
+                        open={deploymentOpen}
+                        onOk={handleDeploySubmit}
+                        onCancel={() => setDeploymentOpen(false)}
+                        width={520}
+                    >
+                        <Form
+                            form={deployForm}
+                            labelCol = {{span: 12}}
+                            wrapperCol={{ span: 12 }}
+                            labelAlign="left"
+                            size='small'
+                        >
+                            <br />
+                            {/* <Form.Item name="metrics" label="Metrics" initialValue='latency'>
+                                <Select
+                                    style={{ width: 180 }}
+                                    options={[
+                                        {value:'latency', label:'Min Latency'},
+                                        {value:'qps', label:'Max QPS'},
+                                        {value:'throughput', label:'Max Throughput'},
+                                        {value:'cost', label:'Min Cost'}
+                                    ]}
+                                />
+                            </Form.Item> */}
+
+                            <Form.Item name="service_user" label="Service Name" initialValue={currentModel}>
+                                <Input />
+                            </Form.Item>
+                            <Form.Item name="expectedLatency" label="Expected Latency(ms)" initialValue={300}>
+                                <InputNumber style={{ width: 80 }}/> 
+                            </Form.Item>
+                            <Form.Item name="expectedThroughput" label="Expected Throughput(token/s)" initialValue={200}>
+                                <InputNumber style={{ width: 80 }}/>
+                            </Form.Item>
+                        </Form>
+                    </Modal>           
             </main>
         </Spin>
     )

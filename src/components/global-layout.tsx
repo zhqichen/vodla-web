@@ -3,51 +3,60 @@
 import type { MenuProps } from 'antd';
 
 import React, { useEffect, useState } from 'react';
-import { Layout, Menu, theme } from 'antd';
-import { HomeOutlined, InteractionOutlined } from '@ant-design/icons';
+import { Layout, Menu, theme, Tag, Button, Modal, Timeline } from 'antd';
+import { HomeOutlined, InteractionOutlined, ContainerOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 
 const { Header, Content, Sider } = Layout;
 
-const topNav: MenuProps['items'] = ['Sign in', 'Sign up'].map((label, index) => ({
+
+const topNav: MenuProps['items'] = ['1.0.0'].map((label, index) => ({
     key: `top${index}`,
-    label: `${label}`,
+    label: `${label}` != '1.0.0' ? `${label}` : <Tag color="#1677ff">v{label}</Tag>,
 }));
 
 const leftNav: MenuProps['items'] = [
-        { icon: HomeOutlined, label: <Link href="/">Home</Link>, flag: 'home' }, 
-        { icon: InteractionOutlined, label: <Link href="/inference">Inference Model</Link>, flag: 'inference' },
+    { icon: HomeOutlined, label: <Link href="/">首页</Link>, flag: 'home' }, 
+    { icon: InteractionOutlined, label: <Link href="/modelFactory">模型工厂</Link>, flag: 'modelFactory' },
+    { icon: InteractionOutlined, label: <Link href="/inference">模型评估</Link>, flag: 'inference' },
+    { icon: InteractionOutlined, label: <Link href="/onlineService">在线服务</Link>, flag: 'onlineService' },
+    { icon: InteractionOutlined, label: <Link href="/clusterOverview">集群概览</Link>, flag: 'clusterOverview' },
+        { icon: InteractionOutlined, label: <Link href="/imageManagement">镜像管理</Link>, flag: 'imageManagement' },
+        { icon: InteractionOutlined, label: <Link href="/packageManagement">安装包管理</Link>, flag: 'packageManagement' },
     ].map(
-    (item, index) => {
-        return {
-            key: item.flag,
-            icon: React.createElement(item.icon),
-            label: item.label,
-
-            // children: new Array(4).fill(null).map((_, j) => {
-            //     const subKey = index * 4 + j + 1;
-            //     return {
-            //         key: subKey,
-            //         label: `option${subKey}`,
-            //     };
-            // }),
-        };
-    },
-);
-
-
+        (item, index) => {
+            return {
+                key: item.flag,
+                icon: React.createElement(item.icon),
+                label: item.label,
+                
+                // children: new Array(4).fill(null).map((_, j) => {
+                    //     const subKey = index * 4 + j + 1;
+                    //     return {
+                        //         key: subKey,
+                        //         label: `option${subKey}`,
+                        //     };
+                        // }),
+                    };
+                },
+                );
+                
+                
 export default function GlobalLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
     const [currentPage, setCurrentPage] = useState<string>('home');
+    const [isOpenLogModal, setIsOpenLogModal] = useState<boolean>(false);
+    const [actionLogs, setActionLogs] = useState<object[]>([]);
+
     const {
         token: { colorBgContainer },
     } = theme.useToken();
     
     useEffect(() => {
-        setCurrentPage(window.location.pathname.split('/').reverse()[0] || 'home')
+        setCurrentPage(window.location.pathname.split('/').reverse()[1] || 'home')
     }, [])
 
     return (
@@ -83,9 +92,36 @@ export default function GlobalLayout({
                         }}
                     >
                         {children}
+                        <Button 
+                        type="primary" 
+                        shape="circle" 
+                        icon={<ContainerOutlined />} 
+                        style={{ position: 'absolute', bottom: '20px', right: '20px'  }}
+                        onClick={ () => {
+                            setActionLogs(JSON.parse(sessionStorage.getItem('actionLogs')))
+                            setIsOpenLogModal(true);
+                        } }
+                        />
+                        
                     </Content>
                 </Layout>
             </Layout>
+            <Modal
+                title="操作日志"
+                centered
+                open={isOpenLogModal}
+                onCancel={() => setIsOpenLogModal(false)}
+                footer={null}
+                width={1000}
+            >
+                <br />
+                <Timeline style={{ height: '400px', overflow: 'auto', paddingTop: '8px' }}>
+                    { actionLogs?.map(log => (
+                        <Timeline.Item color={ log?.success ? 'green' : 'red' } >{log?.message}</Timeline.Item>
+                    )) }
+                </Timeline>
+                <br />
+            </Modal>          
         </Layout>
     )
 }
